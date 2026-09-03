@@ -1,4 +1,5 @@
 import express from "express";
+import authRoutes from "./Routes/authRoutes.js";
 
 const app = express();
 
@@ -9,5 +10,7 @@ app.get("/", (request, response) => {
         message: "Auth API funcionando!"
     });
 });
+
+app.use("/auth", authRoutes);
 
 export default app;
