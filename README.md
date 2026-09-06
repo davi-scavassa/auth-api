@@ -57,7 +57,7 @@ auth-api/
 Clone o repositório:
 
 ```bash
-git clone URL_DO_REPOSITORIO
+git clone https://github.com/davi-scavassa/auth-api.git
 ```
 
 Entre na pasta:
