@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
-const users = [];
+import prisma from "../lib/prisma.js";
 
 export async function register(request, response) {
     const { name, email, password } = request.body;
@@ -30,7 +29,11 @@ export async function register(request, response) {
     }
 
     //VERIFICAR SE O EMAIL JÁ EXISTE
-    const userExists = users.find(user => user.email === email);
+    const userExists = await prisma.user.findUnique({
+        where: {
+            email: email
+        }
+    });
 
     if (userExists) {
         return response.status(409).json({
@@ -41,14 +44,13 @@ export async function register(request, response) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     //CRIAR USUARIOS
-    const newUser = {
-        id: Date.now(),
-        name,
-        email,
-        password: hashedPassword
-    };
-
-    users.push(newUser);
+    const newUser = await prisma.user.create({
+        data: {
+            name: name,
+            email: email,
+            password: hashedPassword
+        }
+    });
 
     return response.status(201).json({
         message: "Usuário registrado com sucesso.",
@@ -71,7 +73,11 @@ export async function login(request, response) {
     }
 
     //PROCURAR USUÁRIO
-    const user = users.find(user => user.email === email);
+    const user = await prisma.user.findUnique({
+        where: {
+            email: email
+        }
+    })
     
     if (!user) {
         return response.status(401).json({
@@ -114,10 +120,13 @@ export async function login(request, response) {
     });
 }
 
-export function profile(request, response) {
-    const user = users.find(
-        user => user.id === request.user.id
-    );
+export async function profile(request, response) {
+
+    const user = await prisma.user.findUnique({
+        where: {
+            id: request.user.id
+        }
+    });
 
     if (!user) {
         return response.status(404).json({

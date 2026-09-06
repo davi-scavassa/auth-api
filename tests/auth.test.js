@@ -1,9 +1,21 @@
-import "dotenv/config";
-import { describe, test, expect } from 'vitest';
-import request from 'supertest';
-import app from "../src/app.js";
+import { config } from "dotenv";
+
+config({
+    path: ".env.test",
+    override: true
+});
+
+const { describe, test, expect, beforeAll } = await import("vitest");
+const request = (await import("supertest")).default;
+const app = (await import("../src/app.js")).default;
+
+const prisma = (await import("../src/lib/prisma.js")).default;
 
 describe ("Testes de autenticação", ()  => {
+
+    beforeAll(async () => {
+        await prisma.user.deleteMany();
+    });
 
     //TESTES DA ROTA DE REGISTRO DE USUÁRIO (POST /auth/register)
     //TESTE DE REGISTRO DE USUÁRIO
