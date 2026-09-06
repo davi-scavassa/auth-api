@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const users = [];
 
@@ -48,7 +49,6 @@ export async function register(request, response) {
     };
 
     users.push(newUser);
-    console.log(users);
 
     return response.status(201).json({
         message: "Usuário registrado com sucesso.",
@@ -57,5 +57,77 @@ export async function register(request, response) {
             name: newUser.name,
             email: newUser.email
         }
+    });
+}
+
+export async function login(request, response) {
+    const { email, password } = request.body;
+
+    //VERIFICAR CAMPOS OBRIGATÓRIOS
+    if (!email || !password) {
+        return response.status(400).json({
+            message: "Email e senha são obrigatórios."
+        });
+    }
+
+    //PROCURAR USUÁRIO
+    const user = users.find(user => user.email === email);
+    
+    if (!user) {
+        return response.status(401).json({
+            message: "Email ou senha inválidos."
+        });
+    }
+
+    //COMPARAR SENHA COM HASH
+    const passwordMatch = await bcrypt.compare(
+        password,
+        user.password
+    );
+
+    if (!passwordMatch) {
+        return response.status(401).json({
+            message: "Email ou senha inválidos."
+        });
+    }
+
+    const token = jwt.sign(
+        {
+            id: user.id,
+            email: user.email
+        },
+        process.env.JWT_SECRET,
+        {
+            expiresIn: "1h"
+        }
+    );
+
+    //LOGIN BEM-SUCEDIDO
+    return response.status(200).json({
+        message: "Login bem-sucedido.",
+        token,
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+        }
+    });
+}
+
+export function profile(request, response) {
+    const user = users.find(
+        user => user.id === request.user.id
+    );
+
+    if (!user) {
+        return response.status(404).json({
+            message: "Usuário não encontrado."
+        });
+    }
+
+    return response.status(200).json({
+        id: user.id,
+        name: user.name,
+        email: user.email
     });
 }
