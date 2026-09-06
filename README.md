@@ -2,14 +2,14 @@
 
 API REST de autenticação desenvolvida com Node.js e Express.
 
-O projeto implementa cadastro e login de usuários, criptografia de senhas com bcrypt, autenticação utilizando JWT e proteção de rotas através de middleware.
-
-Também possui testes automatizados de integração utilizando Vitest e Supertest.
+O projeto possui cadastro e login de usuários, hash de senhas com bcrypt, autenticação utilizando JWT, rotas protegidas, persistência de dados com Prisma ORM + SQLite e testes automatizados com Vitest e Supertest.
 
 ## 🚀 Tecnologias
 
 - Node.js
 - Express
+- Prisma ORM
+- SQLite
 - bcrypt
 - JSON Web Token (JWT)
 - dotenv
@@ -22,26 +22,35 @@ Também possui testes automatizados de integração utilizando Vitest e Supertes
 - Validação de campos obrigatórios
 - Validação de email
 - Validação de senha
-- Verificação de email já cadastrado
+- Verificação de email duplicado
 - Hash de senhas com bcrypt
+- Persistência dos usuários em banco de dados
 - Login de usuários
 - Geração de token JWT
 - Middleware de autenticação
 - Rota de perfil protegida
 - Tratamento de erros
 - Testes automatizados
+- Banco separado para testes
 
 ## 📁 Estrutura do projeto
 
 ```text
 auth-api/
+├── prisma/
+│   ├── migrations/
+│   └── schema.prisma
 ├── src/
-│   ├── controllers/
+│   ├── Controllers/
 │   │   └── authController.js
-│   ├── middlewares/
+│   ├── Middlewares/
 │   │   └── authMiddleware.js
-│   ├── routes/
+│   ├── Routes/
 │   │   └── authRoutes.js
+│   ├── generated/
+│   │   └── prisma/
+│   ├── lib/
+│   │   └── prisma.js
 │   ├── app.js
 │   └── server.js
 ├── tests/
@@ -49,6 +58,7 @@ auth-api/
 ├── .env.example
 ├── .gitignore
 ├── package.json
+├── prisma7.config.ts
 └── README.md
 ```
 
@@ -72,13 +82,26 @@ Instale as dependências:
 npm install
 ```
 
-Crie um arquivo `.env` baseado no `.env.example`:
+Crie um arquivo `.env` baseado no `.env.example` e configure:
 
 ```env
 JWT_SECRET=sua_chave_secreta
+DATABASE_URL="file:./dev.db"
 ```
 
-Inicie o servidor em desenvolvimento:
+Aplique as migrations:
+
+```bash
+npx prisma migrate dev
+```
+
+Gere o Prisma Client:
+
+```bash
+npx prisma generate
+```
+
+Inicie o servidor:
 
 ```bash
 npm run dev
@@ -92,7 +115,7 @@ http://localhost:3000
 
 ## 📡 Endpoints
 
-### Cadastrar usuário
+### Cadastro
 
 ```http
 POST /auth/register
@@ -123,7 +146,7 @@ Exemplo:
 }
 ```
 
-O login retorna um token JWT que pode ser utilizado para acessar rotas protegidas.
+Em caso de sucesso, a API retorna um token JWT.
 
 ### Perfil
 
@@ -131,13 +154,36 @@ O login retorna um token JWT que pode ser utilizado para acessar rotas protegida
 GET /auth/profile
 ```
 
-Requer:
+Essa rota é protegida e exige o token:
 
 ```http
 Authorization: Bearer SEU_TOKEN
 ```
 
-## 🧪 Testes
+## 💾 Banco de dados
+
+O projeto utiliza SQLite com Prisma ORM.
+
+O modelo de usuário possui:
+
+```prisma
+model User {
+  id       Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  password String
+}
+```
+
+Os usuários permanecem armazenados mesmo após o servidor ser reiniciado.
+
+## 🧪 Testes automatizados
+
+Os testes utilizam:
+
+- Vitest
+- Supertest
+- Banco SQLite separado para testes
 
 Execute:
 
@@ -145,39 +191,90 @@ Execute:
 npm test
 ```
 
-A aplicação possui testes para cadastro, validações, login e autenticação JWT.
-
-Atualmente:
+Atualmente o projeto possui:
 
 ```text
 9 testes automatizados
 9 testes passando
 ```
 
+O ambiente de testes utiliza um banco separado do banco de desenvolvimento. Isso permite limpar e recriar os dados necessários sem afetar os dados utilizados durante o desenvolvimento.
+
 ## 🔐 Segurança
 
-As senhas não são armazenadas em texto puro. Antes de serem armazenadas, são transformadas em hash utilizando bcrypt.
+As senhas nunca são armazenadas em texto puro.
 
-As rotas protegidas utilizam JSON Web Token (JWT) para autenticação.
+Antes de salvar um usuário:
 
-O segredo utilizado para assinar os tokens é armazenado em uma variável de ambiente e não é enviado ao repositório.
+```text
+Senha
+  ↓
+bcrypt
+  ↓
+Hash
+  ↓
+SQLite
+```
+
+Durante o login, `bcrypt.compare()` compara a senha informada com o hash armazenado.
+
+Após um login válido, a API gera um JWT com tempo de expiração.
+
+O segredo utilizado para assinar os tokens fica armazenado em uma variável de ambiente e não é enviado ao GitHub.
 
 ## 📚 Conceitos praticados
 
-Este projeto foi desenvolvido para praticar conceitos de desenvolvimento backend, incluindo:
+Este projeto foi desenvolvido para praticar:
 
 - APIs REST
-- Métodos HTTP
-- Status HTTP
-- Rotas e controllers
+- Métodos e status HTTP
+- Controllers e rotas
 - Middlewares
+- Programação assíncrona
 - Hash de senhas
 - Autenticação JWT
 - Variáveis de ambiente
+- ORM
+- Modelagem de dados
+- Migrations
+- Persistência com banco de dados
+- Separação entre ambiente de desenvolvimento e testes
 - Testes de integração
 
-## ⚠️ Observação
+## 🔄 Fluxo de autenticação
 
-Atualmente os usuários são armazenados em memória. Isso significa que os dados são apagados sempre que o servidor é reiniciado.
+```text
+Cadastro
+   ↓
+Validação
+   ↓
+bcrypt
+   ↓
+Prisma
+   ↓
+SQLite
 
-Uma futura evolução do projeto será adicionar persistência utilizando banco de dados.
+Login
+   ↓
+Busca usuário no banco
+   ↓
+bcrypt.compare()
+   ↓
+JWT
+   ↓
+Bearer Token
+   ↓
+Middleware
+   ↓
+Rota protegida
+```
+
+## 🚧 Possíveis melhorias
+
+- Refresh tokens
+- Recuperação de senha
+- Confirmação de email
+- Roles e permissões
+- PostgreSQL para produção
+- Deploy da API
+- CI para execução automática dos testes
